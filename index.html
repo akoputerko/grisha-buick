@@ -62,7 +62,8 @@ spin.addEventListener('click', async () => {
   status.textContent = 'Ну, Гриша, держись.';
   wrap.classList.add('spinning');
   const random = new Uint32Array(1); crypto.getRandomValues(random);
-  const index = random[0] % outcomes.length;
+  const winningSectors = outcomes.flatMap((label, index) => label === 'Да' ? [index] : []);
+  const index = winningSectors[random[0] % winningSectors.length];
   const targetAngle = (360 - (index * 45 + 22.5)) % 360;
   const next = rotation + 360 * 6 + ((targetAngle - rotation % 360 + 360) % 360);
   const duration = reduced.matches ? 100 : 4400;
@@ -86,4 +87,5 @@ spin.addEventListener('click', async () => {
   }
 });
 document.querySelectorAll('.close,.done').forEach(button => button.addEventListener('click', () => popup.close()));
+
 </script></body></html>
