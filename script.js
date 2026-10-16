@@ -1,8 +1,35 @@
 const no = document.querySelector('#no');
 const yes = document.querySelector('#yes');
 const popup = document.querySelector('#celebration');
+const mobileLayout = matchMedia('(max-width: 600px), (hover: none) and (pointer: coarse)');
+const escapeSpace = document.createElement('div');
+escapeSpace.id = 'escape-space';
+escapeSpace.setAttribute('aria-hidden', 'true');
+document.body.append(escapeSpace);
+let mobileSide = Math.random() < .5;
 function escapeButton(event) {
   event?.preventDefault();
+  if (event?.pointerType === 'touch' || mobileLayout.matches) {
+    if (!no.classList.contains('escaped')) {
+      const spacer = document.createElement('span');
+      spacer.style.cssText = `display:block;width:${no.offsetWidth}px;height:${no.offsetHeight}px;flex-shrink:0`;
+      no.before(spacer);
+    }
+    document.body.classList.add('touch-escape');
+    // Reserve a visible, content-free area, independent of the main scroll position.
+    const rail = escapeSpace.getBoundingClientRect();
+    const width = no.offsetWidth, height = no.offsetHeight;
+    if (rail.height) {
+      const current = no.getBoundingClientRect();
+      const side = current.x + width / 2 < innerWidth / 2;
+      mobileSide = no.classList.contains('escaped') ? side : mobileSide;
+      no.classList.add('escaped');
+      no.style.left = `${mobileSide ? innerWidth - width - 16 : 16}px`;
+      no.style.top = `${rail.top + (rail.height - height) / 2 - 3}px`;
+      no.style.visibility = '';
+      return;
+    }
+  }
   const box = no.getBoundingClientRect();
   if (!no.classList.contains('escaped')) {
     const spacer = document.createElement('span');
@@ -53,9 +80,8 @@ function escapeButton(event) {
     return Math.hypot(dx, dy) > 75 && Math.hypot(p.x - box.x, p.y - box.y) > 60;
   });
   const target = safe[Math.floor(Math.random() * safe.length)];
-  // A very small viewport may contain no empty area: hide instead of covering content.
+  // Keep the current position if the desktop viewport has no other safe destination.
   if (!target) {
-    no.style.visibility = 'hidden';
     return;
   }
   no.style.visibility = '';
@@ -69,9 +95,21 @@ window.addEventListener('pointermove', event => {
   const box = no.getBoundingClientRect();
   if (event.clientX > box.left - 65 && event.clientX < box.right + 65 && event.clientY > box.top - 65 && event.clientY < box.bottom + 65) escapeButton(event);
 });
-for (const type of ['pointerenter', 'pointerdown', 'click', 'focus']) no.addEventListener(type, escapeButton);
-no.addEventListener('touchstart', escapeButton, {passive:false});
-for (const type of ['resize', 'scroll']) window.addEventListener(type, () => { if(no.classList.contains('escaped') || no.style.visibility === 'hidden') escapeButton(); }, {passive:true});
+no.addEventListener('pointerenter', event => {
+  if (event.pointerType === 'mouse' && !mobileLayout.matches) escapeButton(event);
+});
+no.addEventListener('pointerdown', escapeButton);
+// Pointer taps are handled once on pointerdown; click covers keyboard activation.
+no.addEventListener('click', event => {
+  event.preventDefault();
+  if (event.detail === 0) escapeButton(event);
+});
+for (const type of ['resize', 'scroll']) window.addEventListener(type, () => {
+  if (no.classList.contains('escaped')) escapeButton();
+}, {passive:true});
+if (window.visualViewport) visualViewport.addEventListener('resize', () => {
+  if (no.classList.contains('escaped')) escapeButton();
+});
 yes.addEventListener('click', () => {
   if (!popup.open) popup.showModal();
   if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
