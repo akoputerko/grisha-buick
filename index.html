@@ -61,10 +61,17 @@ spin.addEventListener('click', async () => {
   busy = true; spin.disabled = true; spin.textContent = 'Крутится…';
   status.textContent = 'Ну, Гриша, держись.';
   wrap.classList.add('spinning');
-  const random = new Uint32Array(1); crypto.getRandomValues(random);
+  const random = new Uint32Array(4); crypto.getRandomValues(random);
+  const unit = n => n / 4294967296;
   const winningSectors = outcomes.flatMap((label, index) => label === 'Да' ? [index] : []);
   const index = winningSectors[random[0] % winningSectors.length];
-  const targetAngle = (360 - (index * 45 + 22.5)) % 360;
+  // Most spins stop close to either boundary, safely inside the winning sector.
+  const nearEdge = unit(random[1]) < .78;
+  const edgeDistance = 2.5 + unit(random[3]) * 3.5;
+  const offset = nearEdge
+    ? (unit(random[2]) < .5 ? edgeDistance : 45 - edgeDistance)
+    : 10 + unit(random[3]) * 25;
+  const targetAngle = (360 - (index * 45 + offset)) % 360;
   const next = rotation + 360 * 6 + ((targetAngle - rotation % 360 + 360) % 360);
   const duration = reduced.matches ? 100 : 4400;
   const timer = setInterval(() => tone(600 + Math.random() * 250), 120);
